@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/*
+ * DocuCloud AI — Global Styles
+ * Tailwind v4 is configured via the @tailwindcss/vite plugin in vite.config.js.
+ * No tailwind.config.js or postcss.config.js is needed.
+ */
+
+:root {
+  /* Brand colors from Stitch design: green accent + dark neutral */
+  --color-brand: #51c878;
+  --color-brand-dark: #3aad60;
+  --color-surface: #0f151e;
+  --color-surface-card: #161e2a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FileText, DollarSign, Clock } from 'lucide-react';
+import { FileText, DollarSign, Activity } from 'lucide-react';
 import Uploader from '../components/Uploader';
 import ExtractionTable from '../components/ExtractionTable';
 
@@ -39,7 +39,11 @@ export default function Dashboard() {
   // 2. Compute Top-Level Metrics
   const totalProcessed = documents.length;
   const totalVolume = documents.reduce((sum, doc) => sum + (doc.total_amount || 0), 0);
-  const recentActivityDate = documents[0]?.created_at;
+  
+  const docsWithScores = documents.filter(doc => typeof doc.confidence_score === 'number');
+  const averageAccuracy = docsWithScores.length > 0 
+    ? docsWithScores.reduce((sum, doc) => sum + doc.confidence_score, 0) / docsWithScores.length 
+    : 0;
 
   // Formatting Helpers
   const formatCurrency = (amount) => {
@@ -47,14 +51,7 @@ export default function Dashboard() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  const timeAgo = (isoString) => {
-    if (!isoString) return 'No activity yet';
-    const seconds = Math.floor((new Date() - new Date(isoString)) / 1000);
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
-    return `${Math.floor(seconds / 86400)} days ago`;
-  };
+
 
   return (
     <div className="max-w-7xl mx-auto py-8">
@@ -91,11 +88,11 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-start space-x-4">
           <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
-            <Clock className="w-6 h-6" />
+            <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Recent Activity</p>
-            <h3 className="text-lg font-bold text-slate-900 mt-1">{timeAgo(recentActivityDate)}</h3>
+            <p className="text-sm font-medium text-slate-500 mb-1">System Accuracy</p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-1">{averageAccuracy > 0 ? `${averageAccuracy.toFixed(1)}%` : '—'}</h3>
           </div>
         </div>
 

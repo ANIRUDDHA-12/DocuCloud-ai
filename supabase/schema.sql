@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
   total_amount  NUMERIC(10, 2) CHECK (total_amount >= 0),
   date          DATE,
   category      TEXT          CHECK (char_length(category) <= 100),
+  confidence_score INTEGER      CHECK (confidence_score >= 0 AND confidence_score <= 100),
   raw_json      JSONB,
   created_at    TIMESTAMPTZ   DEFAULT now() NOT NULL
 );

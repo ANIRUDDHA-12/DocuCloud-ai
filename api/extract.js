@@ -70,8 +70,11 @@ Required JSON shape:
   "vendor": "<string: business name, or null if not found>",
   "total_amount": <number: final total as a float, or null if not found>,
   "date": "<string: date in YYYY-MM-DD format, or null if not found>",
-  "category": "<string: one of Food, Transport, Utilities, Shopping, Healthcare, Entertainment, Other>"
-}`;
+  "category": "<string: one of Food, Transport, Utilities, Shopping, Healthcare, Entertainment, Other>",
+  "confidence_score": <integer: 0 to 100>
+}
+
+Assess your own certainty for this extraction. If the text is perfectly clear and all fields are confident, 90-100. If blurry, handwritten, or missing fields, lower the score proportionally.`;
 
 // ─────────────────────────────────────────────────────────────
 // CORS headers — required for browser → API communication
@@ -132,7 +135,7 @@ async function imageUrlToBase64(url) {
  * @returns {{ valid: boolean, missing: string[] }}
  */
 function validateExtractedFields(data) {
-  const required = ['vendor', 'total_amount', 'date', 'category'];
+  const required = ['vendor', 'total_amount', 'date', 'category', 'confidence_score'];
   const missing = required.filter((key) => !(key in data));
   return { valid: missing.length === 0, missing };
 }
@@ -242,11 +245,12 @@ export default async function handler(req, res) {
       .insert({
         user_id,
         file_url,
-        vendor:       extracted.vendor       ?? null,
-        total_amount: extracted.total_amount  ?? null,
-        date:         extracted.date          ?? null,
-        category:     extracted.category      ?? null,
-        raw_json:     extracted,
+        vendor:           extracted.vendor           ?? null,
+        total_amount:     extracted.total_amount      ?? null,
+        date:             extracted.date              ?? null,
+        category:         extracted.category          ?? null,
+        confidence_score: extracted.confidence_score  ?? null,
+        raw_json:         extracted,
       })
       .select()
       .single();

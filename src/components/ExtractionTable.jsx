@@ -27,7 +27,7 @@ export default function ExtractionTable({ documents, loading, error }) {
       `"${(doc.vendor || '').replace(/"/g, '""')}"`,
       `"${(doc.category || 'Uncategorized').replace(/"/g, '""')}"`,
       `"${doc.total_amount || 0}"`,
-      `"${doc.raw_json ? 'Processed' : 'Failed'}"`
+      `"${doc.raw_json ? (doc.confidence_score > 85 ? 'Processed' : 'Needs Review') : 'Failed'}"`
     ].join(','));
 
     // Combine headers and rows
@@ -172,9 +172,15 @@ export default function ExtractionTable({ documents, loading, error }) {
                   
                   <td className="px-6 py-4 text-center">
                     {doc.raw_json ? (
-                       <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                         Processed
-                       </span>
+                       doc.confidence_score > 85 ? (
+                         <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                           ● Processed
+                         </span>
+                       ) : (
+                         <span className="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20">
+                           ⚠ Needs Review
+                         </span>
+                       )
                     ) : (
                        <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
                          Failed Payload

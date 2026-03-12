@@ -107,6 +107,7 @@ export default function Dashboard() {
         documents={documents} 
         loading={loading} 
         error={error} 
+        onSuccess={() => setRefreshTrigger(prev => prev + 1)}
       />
     </div>
   );

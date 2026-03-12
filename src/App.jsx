@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
+import ApiKeys from './pages/ApiKeys';
 
 function App() {
   return (
@@ -19,6 +20,8 @@ function App() {
             <Route path="/dashboard" element={<DashboardLayout />}>
               {/* The Core Dashboard App Feature */}
               <Route index element={<Dashboard />} />
+              {/* API Keys Feature */}
+              <Route path="keys" element={<ApiKeys />} />
             </Route>
 
             {/* Auto-redirect root (/) to dashboard */}

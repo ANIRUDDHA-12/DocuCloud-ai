@@ -174,15 +174,32 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: { user }, error: authError } = await adminSupabase.auth.getUser(token);
+    let user_id;
 
-    if (authError || !user) {
-      return res.status(401).json({
-        error: 'Invalid or expired session token. Please log in again.',
-      });
+    if (token.startsWith('dc_')) {
+      // API Key Logic
+      const { data: keyData, error: keyError } = await adminSupabase
+        .from('api_keys')
+        .select('user_id')
+        .eq('api_key', token)
+        .single();
+
+      if (keyError || !keyData) {
+        return res.status(401).json({ error: 'Invalid or revoked API Key.' });
+      }
+      user_id = keyData.user_id;
+
+    } else {
+      // JWT Session Logic
+      const { data: { user }, error: authError } = await adminSupabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return res.status(401).json({
+          error: 'Invalid or expired session token. Please log in again.',
+        });
+      }
+      user_id = user.id; // Authoritative. Never use client-provided user_id.
     }
-
-    const user_id = user.id; // Authoritative. Never use client-provided user_id.
 
     // Step 3: Validate file_url from body
     const { file_url } = req.body || {};

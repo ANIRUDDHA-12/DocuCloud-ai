@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { FileText, ExternalLink, Loader2, AlertCircle, Search, Download } from 'lucide-react';
+import DocumentModal from './DocumentModal';
 
-export default function ExtractionTable({ documents, loading, error }) {
+export default function ExtractionTable({ documents, loading, error, onSuccess }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   // 1. Filter documents locally based on the search term
   const filteredDocuments = documents.filter((doc) => {
@@ -114,7 +116,7 @@ export default function ExtractionTable({ documents, loading, error }) {
       {/* ─────────────────────────────────────────────────────────
           DATA TABLE
           ───────────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto">
+      <div className="w-full overflow-x-auto rounded-lg shadow-sm">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
             <tr>
@@ -190,11 +192,12 @@ export default function ExtractionTable({ documents, loading, error }) {
 
                   <td className="px-6 py-4 text-center">
                     <button 
-                      onClick={() => alert(`This file is sitting in a private bucket: ${doc.file_url}\nTo view it, we would generate a temporary Signed URL exactly like we did in the Uploader component.`)}
-                      className="text-slate-400 hover:text-green-600 transition-colors"
-                      title="View Origin File"
+                      onClick={() => setSelectedDoc(doc)}
+                      className="text-slate-500 hover:text-green-600 font-medium text-xs border border-slate-200 hover:border-green-300 bg-white hover:bg-green-50 px-3 py-1.5 rounded-lg transition-all flex items-center justify-center mx-auto"
+                      title="Review Document"
                     >
-                      <ExternalLink className="w-4 h-4 mx-auto" />
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      Review
                     </button>
                   </td>
                 </tr>
@@ -203,6 +206,15 @@ export default function ExtractionTable({ documents, loading, error }) {
           </tbody>
         </table>
       </div>
+
+      {/* HITL Document Modal Mount */}
+      {selectedDoc && (
+        <DocumentModal 
+          doc={selectedDoc} 
+          onClose={() => setSelectedDoc(null)} 
+          onSuccess={onSuccess}
+        />
+      )}
     </div>
   );
 }

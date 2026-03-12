@@ -194,8 +194,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Image download failed: ${err.message}` });
     }
 
-    // Step 5: Call Gemini 1.5 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Step 5: Call Gemini 2.5 Flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const result = await model.generateContent([
       EXTRACTION_PROMPT,

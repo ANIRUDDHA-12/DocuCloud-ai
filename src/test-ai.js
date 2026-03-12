@@ -26,7 +26,7 @@ const API_URL           = 'http://localhost:3000/api/extract';
 
 // A real receipt image (publicly accessible) for Gemini to analyze
 // Source: a sample Walmart receipt image from a public test dataset
-const TEST_IMAGE_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/ReceiptSwiss.jpg/220px-ReceiptSwiss.jpg';
+const TEST_IMAGE_URL = 'https://ocr.space/Content/Images/receipt-ocr-original.jpg';
 
 // ─────────────────────────────────────────────────────────────
 // Env guard

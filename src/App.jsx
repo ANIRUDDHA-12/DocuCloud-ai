@@ -1,35 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
+import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Route */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Protected Routes Wrapper */}
+          <Route element={<ProtectedRoute />}>
+            {/* Dashboard Shell renders at /dashboard */}
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              {/* Default Nested Content inside the Outlet */}
+              <Route index element={
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                  <h2 className="text-xl font-semibold text-slate-800 mb-2">Phase 3A Complete</h2>
+                  <p className="text-slate-500">The Auth Context and Dashboard Shell are successfully wired. 
+                  The future Data Table component will render here.</p>
+                </div>
+              } />
+            </Route>
+
+            {/* Auto-redirect root (/) to dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+
+          {/* Catch-all 404 (Redirect to root/dashboard) */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;

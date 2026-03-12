@@ -33,7 +33,7 @@ export default function Overview() {
     }
     
     fetchDocuments();
-  }, []);
+  }, [refreshTrigger]);
 
   // 2. Compute Top-Level Metrics
   const totalProcessed = documents.length;

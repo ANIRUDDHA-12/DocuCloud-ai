@@ -16,10 +16,10 @@ export default function DashboardLayout() {
   };
 
   const navItems = [
-    { label: 'Overview', icon: LayoutDashboard, path: '/dashboard/overview' },
-    { label: 'Extraction Logs', icon: FileText, path: '/dashboard' }, // Default route for now
+    { label: 'Overview Dashboard', icon: LayoutDashboard, path: '/dashboard/overview' },
+    { label: 'Extraction Logs', icon: FileText, path: '/dashboard/logs' },
     { label: 'API Keys', icon: Key, path: '/dashboard/keys' },
-    { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
+    { label: 'Account Settings', icon: Settings, path: '/dashboard/settings' },
   ];
 
   return (
@@ -76,8 +76,8 @@ export default function DashboardLayout() {
         <nav className="flex-1 py-6 px-3 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            // Highlight 'Extraction Logs' as active by default for Phase 3
-            const isActive = location.pathname === item.path || (location.pathname === '/dashboard' && item.path === '/dashboard');
+            // Highlight based on current path exact match.
+            const isActive = location.pathname.startsWith(item.path);
             
             return (
               <Link

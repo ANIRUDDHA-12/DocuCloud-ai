@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import ApiKeys from './pages/ApiKeys';
+import Overview from './pages/Overview';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -18,8 +20,13 @@ function App() {
           <Route element={<ProtectedRoute />}>
             {/* Dashboard Shell renders at /dashboard */}
             <Route path="/dashboard" element={<DashboardLayout />}>
-              {/* The Core Dashboard App Feature */}
-              <Route index element={<Dashboard />} />
+              {/* Default landing page resolves to Overview Action Center */}
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<Overview />} />
+              {/* Raw Logs DataTable */}
+              <Route path="logs" element={<Dashboard />} />
+              {/* Settings Core */}
+              <Route path="settings" element={<Settings />} />
               {/* API Keys Feature */}
               <Route path="keys" element={<ApiKeys />} />
             </Route>

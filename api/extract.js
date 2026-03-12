@@ -105,11 +105,17 @@ async function imageUrlToBase64(url) {
 
   const contentType = response.headers.get('content-type') || '';
   const mimeType = contentType.split(';')[0].trim();
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedTypes = [
+    'image/jpeg', 
+    'image/png', 
+    'image/webp', 
+    'image/gif', 
+    'application/pdf'
+  ];
 
   if (!allowedTypes.includes(mimeType)) {
     throw new Error(
-      `Unsupported file type: "${mimeType}". Only JPEG, PNG, WebP, and GIF are supported.`
+      `Unsupported file type: "${mimeType}". Please upload an image (JPEG, PNG, WebP) or a PDF.`
     );
   }
 

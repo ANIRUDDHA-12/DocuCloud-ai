@@ -14,9 +14,9 @@ export default function Uploader({ onSuccess }) {
     if (!file) return;
 
     // Strict Frontend Validation (Mirroring backend limitations)
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
       setStatus('error');
-      setErrorMessage('Only images (JPEG, PNG, WebP) are supported by the AI Vision model.');
+      setErrorMessage('Only images (JPEG, PNG, WebP) or PDFs are supported by the AI model.');
       return;
     }
 
@@ -97,15 +97,16 @@ export default function Uploader({ onSuccess }) {
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
       <div className="p-6 border-b border-slate-100">
         <h2 className="text-lg font-semibold text-slate-800">Process Document</h2>
-        <p className="text-sm text-slate-500">Upload a receipt or invoice to instantly extract structured data.</p>
+        <p className="text-sm text-slate-500">Upload a receipt or invoice (Image or PDF) to instantly extract structured data.</p>
       </div>
 
       <div className="p-6">
         <input 
+          data-testid="uploader-input"
           type="file" 
           ref={fileInputRef}
           onChange={handleFileSelect}
-          accept="image/jpeg, image/png, image/webp"
+          accept="image/jpeg, image/png, image/webp, application/pdf"
           capture="environment" /* Native mobile camera pop */
           className="hidden" 
         />
@@ -124,8 +125,8 @@ export default function Uploader({ onSuccess }) {
               <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
                 <UploadCloud className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-medium text-slate-700 mb-1">Click to upload or drag & drop</h3>
-              <p className="text-sm text-slate-500">Supports JPEG, PNG, or WebP (Max 10MB)</p>
+              <h3 className="text-base font-medium text-slate-700 mb-1">Drop an image or PDF here</h3>
+              <p className="text-sm text-slate-500">Supports JPEG, PNG, WebP, and PDF (Max 10MB)</p>
             </>
           )}
 

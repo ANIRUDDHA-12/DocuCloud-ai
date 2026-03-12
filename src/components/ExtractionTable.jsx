@@ -23,14 +23,20 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
     const headers = ['Pipeline ID', 'Date', 'Vendor', 'Category', 'Total Amount', 'Status'];
 
     // Map rows. Use standard escaping for CSV format (wrap strings in quotes)
-    const rows = filteredDocuments.map(doc => [
-      `"${doc.id}"`,
-      `"${doc.created_at}"`,
-      `"${(doc.vendor || '').replace(/"/g, '""')}"`,
-      `"${(doc.category || 'Uncategorized').replace(/"/g, '""')}"`,
-      `"${doc.total_amount || 0}"`,
-      `"${doc.raw_json ? (doc.confidence_score > 85 ? 'Processed' : 'Needs Review') : 'Failed'}"`
-    ].join(','));
+    const rows = filteredDocuments.map(doc => {
+      const isFailed = !doc.raw_json;
+      const isReview = typeof doc.confidence_score === 'number' && doc.confidence_score <= 85;
+      const statusStr = isFailed ? 'Failed' : isReview ? 'Needs Review' : 'Processed';
+
+      return [
+        `"${doc.id}"`,
+        `"${doc.created_at}"`,
+        `"${(doc.vendor || '').replace(/"/g, '""')}"`,
+        `"${(doc.category || 'Uncategorized').replace(/"/g, '""')}"`,
+        `"${doc.total_amount || 0}"`,
+        `"${statusStr}"`
+      ].join(',');
+    });
 
     // Combine headers and rows
     const csvContent = [headers.join(','), ...rows].join('\n');

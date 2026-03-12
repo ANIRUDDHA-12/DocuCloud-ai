@@ -6,9 +6,6 @@ export default function Dashboard() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Uploader triggers this to refresh the data
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // 1. Centralized Data Fetch (State Lifted from Table)
   useEffect(() => {
@@ -37,10 +34,10 @@ export default function Dashboard() {
 
 
   return (
-    <div className="max-w-7xl mx-auto py-8">
+    <div className="max-w-7xl mx-auto py-4 md:py-8">
       {/* Page Header */}
-      <div className="mb-8 pl-1">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Dashboard Overview</h1>
+      <div className="mb-6 md:mb-8 pl-1">
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-1 md:mb-2 tracking-tight">Extraction Logs</h1>
         <p className="text-sm md:text-base text-slate-500">Historical archive of all system-processed documents.</p>
       </div>
 
@@ -52,7 +49,7 @@ export default function Dashboard() {
         documents={documents} 
         loading={loading} 
         error={error} 
-        onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+        onSuccess={() => {}} // No-op since we only read on this page
       />
     </div>
   );

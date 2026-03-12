@@ -1,27 +1,116 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { FileText, DollarSign, Clock } from 'lucide-react';
 import Uploader from '../components/Uploader';
 import ExtractionTable from '../components/ExtractionTable';
 
 export default function Dashboard() {
-  // Acts as our global trigger. Every time Uploader succeeds, 
-  // it increments this value. Because ExtractionTable listens to it 
-  // in its useEffect dependency array, it will automatically re-fetch!
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Uploader triggers this to refresh the data
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleUploadSuccess = () => {
-    setRefreshTrigger(prev => prev + 1);
+  // 1. Centralized Data Fetch (State Lifted from Table)
+  useEffect(() => {
+    async function fetchDocuments() {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: dbError } = await supabase
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (dbError) {
+        console.error('Error fetching docs:', dbError);
+        setError('Failed to load extraction history.');
+      } else {
+        setDocuments(data || []);
+      }
+      
+      setLoading(false);
+    }
+    
+    fetchDocuments();
+  }, [refreshTrigger]);
+
+  // 2. Compute Top-Level Metrics
+  const totalProcessed = documents.length;
+  const totalVolume = documents.reduce((sum, doc) => sum + (doc.total_amount || 0), 0);
+  const recentActivityDate = documents[0]?.created_at;
+
+  // Formatting Helpers
+  const formatCurrency = (amount) => {
+    if (!amount) return '$0.00';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
+  const timeAgo = (isoString) => {
+    if (!isoString) return 'No activity yet';
+    const seconds = Math.floor((new Date() - new Date(isoString)) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return `${Math.floor(seconds / 86400)} days ago`;
   };
 
   return (
     <div className="max-w-7xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Automated Extraction</h1>
-        <p className="text-slate-500">Upload documents to instantly extract and log structured data using Gemini 2.5 Flash.</p>
+      {/* Page Header */}
+      <div className="mb-8 pl-1">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Dashboard Overview</h1>
+        <p className="text-slate-500">Monitor extraction volumes and upload new documents for processing.</p>
       </div>
 
-      <Uploader onSuccess={handleUploadSuccess} />
+      {/* ─────────────────────────────────────────────────────────
+          METRIC CARDS (Phase 4 Deliverable)
+          ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-start space-x-4">
+          <div className="p-3 bg-green-50 text-green-600 rounded-lg">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Documents Processed</p>
+            <h3 className="text-2xl font-bold text-slate-900">{totalProcessed}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-start space-x-4">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+            <DollarSign className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Total Extraction Volume</p>
+            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(totalVolume)}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-start space-x-4">
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Recent Activity</p>
+            <h3 className="text-lg font-bold text-slate-900 mt-1">{timeAgo(recentActivityDate)}</h3>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────
+          CORE FEATURES
+          ───────────────────────────────────────────────────────── */}
+      <Uploader onSuccess={() => setRefreshTrigger(prev => prev + 1)} />
       
-      <ExtractionTable refreshTrigger={refreshTrigger} />
+      <ExtractionTable 
+        documents={documents} 
+        loading={loading} 
+        error={error} 
+      />
     </div>
   );
 }

@@ -23,9 +23,8 @@
  * @module api/extract
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
-import { stripMarkdownJson } from './_utils/strip-json.js';
 
 // ─────────────────────────────────────────────────────────────
 // Environment Validation — fail at cold-start, not mid-request
@@ -33,12 +32,12 @@ import { stripMarkdownJson } from './_utils/strip-json.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !GEMINI_API_KEY) {
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !GROQ_API_KEY) {
   throw new Error(
     '[DocuCloud AI] api/extract.js: Missing one or more required env vars.\n' +
-    '  Required: VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY'
+    '  Required: VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GROQ_API_KEY'
   );
 }
 
@@ -52,23 +51,27 @@ const adminSupabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 // ─────────────────────────────────────────────────────────────
-// Gemini client
+// Groq client
 // ─────────────────────────────────────────────────────────────
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const groq = new Groq();
 
 // ─────────────────────────────────────────────────────────────
-// Gemini system prompt — strict JSON enforcement
+// System prompt — strict JSON enforcement
 // ─────────────────────────────────────────────────────────────
 
 const EXTRACTION_PROMPT = `You are a document data extraction engine.
 Analyze the provided receipt or invoice image and extract the following fields.
-Return ONLY a single, raw, valid JSON object with NO markdown, NO explanation, NO surrounding text.
+Return ONLY a single, raw, valid JSON object. Do not include any markdown formatting such as \`\`\`json tags. Do not include any explanations or surrounding text.
 
 Required JSON shape:
 {
   "vendor": "<string: business name, or null if not found>",
-  "total_amount": <number: final total as a float, or null if not found>,
+  "total_amount": <number: final total as a float in the original currency, or null if not found>,
+  "currency_code": "<string: 3-letter ISO code (e.g., 'USD', 'EUR', 'INR'). Default to 'INR' if undetermined>",
+  "base_amount": <number: subtotal before taxes as a float, fallback to 0>,
+  "tax_amount": <number: total tax applied as a float, fallback to 0>,
+  "tax_type": "<string: specific name of the tax (e.g., 'GST', 'VAT', 'Sales Tax', or 'None')>",
   "date": "<string: date in YYYY-MM-DD format, or null if not found>",
   "category": "<string: one of Food, Transport, Utilities, Shopping, Healthcare, Entertainment, Other>",
   "confidence_score": <integer: 0 to 100>
@@ -129,13 +132,13 @@ async function imageUrlToBase64(url) {
 }
 
 /**
- * Validates that the Gemini-extracted JSON has all required fields.
+ * Validates that the extracted JSON has all required fields.
  *
- * @param {object} data - Parsed JSON from Gemini.
+ * @param {object} data - Parsed JSON from LLM.
  * @returns {{ valid: boolean, missing: string[] }}
  */
 function validateExtractedFields(data) {
-  const required = ['vendor', 'total_amount', 'date', 'category', 'confidence_score'];
+  const required = ['vendor', 'total_amount', 'currency_code', 'base_amount', 'tax_amount', 'tax_type', 'date', 'category', 'confidence_score'];
   const missing = required.filter((key) => !(key in data));
   return { valid: missing.length === 0, missing };
 }
@@ -164,6 +167,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const startTime = performance.now();
     // Step 2: Extract + verify JWT → get real user_id
     const authHeader = req.headers['authorization'] || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -220,29 +224,37 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Image download failed: ${err.message}` });
     }
 
-    // Step 5: Call Gemini 2.5 Flash
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Step 5: Call Groq LLM (LLaMA 3.2 Vision)
+    const completion = await groq.chat.completions.create({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: EXTRACTION_PROMPT },
+            { 
+              type: "image_url", 
+              image_url: { 
+                url: `data:${imageData.mimeType};base64,${imageData.base64}` 
+              } 
+            }
+          ]
+        }
+      ]
+    });
 
-    const result = await model.generateContent([
-      EXTRACTION_PROMPT,
-      {
-        inlineData: {
-          mimeType: imageData.mimeType,
-          data: imageData.base64,
-        },
-      },
-    ]);
+    const rawText = completion.choices[0].message.content;
+    const duration = Math.round(performance.now() - startTime);
 
-    const rawText = result.response.text();
-
-    // Step 6: Strip markdown fences + parse JSON
+    // Step 6: Parse JSON
     let extracted;
     try {
-      const cleanJson = stripMarkdownJson(rawText);
-      extracted = JSON.parse(cleanJson);
+      extracted = JSON.parse(rawText);
     } catch {
       return res.status(422).json({
-        error: 'Gemini returned a response that could not be parsed as JSON.',
+        error: 'Groq returned a response that could not be parsed as JSON.',
         raw_response: rawText,
       });
     }
@@ -251,7 +263,7 @@ export default async function handler(req, res) {
     const { valid, missing } = validateExtractedFields(extracted);
     if (!valid) {
       return res.status(422).json({
-        error: `Gemini response is missing required fields: ${missing.join(', ')}`,
+        error: `Groq response is missing required fields: ${missing.join(', ')}`,
         raw_response: rawText,
       });
     }
@@ -264,10 +276,15 @@ export default async function handler(req, res) {
         file_url,
         vendor:           extracted.vendor           ?? null,
         total_amount:     extracted.total_amount      ?? null,
+        currency_code:    extracted.currency_code    ?? 'INR',
+        base_amount:      extracted.base_amount      ?? 0,
+        tax_amount:       extracted.tax_amount       ?? 0,
+        tax_type:         extracted.tax_type         ?? 'None',
         date:             extracted.date              ?? null,
         category:         extracted.category          ?? null,
         confidence_score: extracted.confidence_score  ?? null,
         raw_json:         extracted,
+        processing_time_ms: duration,
       })
       .select()
       .single();

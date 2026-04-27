@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FileText, DollarSign, Activity } from 'lucide-react';
+import { FileText, DollarSign, Activity, Zap } from 'lucide-react';
 import Uploader from '../components/Uploader';
 
 export default function Overview() {
@@ -19,7 +19,7 @@ export default function Overview() {
       
       const { data, error: dbError } = await supabase
         .from('documents')
-        .select('created_at, total_amount, confidence_score') // Minimal payload for metrics
+        .select('created_at, total_amount, confidence_score, processing_time_ms') // Minimal payload for metrics
         .order('created_at', { ascending: false });
         
       if (dbError) {
@@ -44,6 +44,11 @@ export default function Overview() {
     ? docsWithScores.reduce((sum, doc) => sum + doc.confidence_score, 0) / docsWithScores.length 
     : 0;
 
+  const docsWithTime = documents.filter(doc => doc.processing_time_ms && doc.processing_time_ms > 0);
+  const averageComputeLatency = docsWithTime.length > 0
+    ? docsWithTime.reduce((sum, doc) => sum + doc.processing_time_ms, 0) / docsWithTime.length / 1000
+    : 0;
+
   // Formatting Helpers
   const formatCurrency = (amount) => {
     if (!amount) return '$0.00';
@@ -62,7 +67,7 @@ export default function Overview() {
       {/* ─────────────────────────────────────────────────────────
           METRIC CARDS (Responsive Grid)
           ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 flex items-start space-x-4">
           <div className="p-3 bg-green-50 text-green-600 rounded-lg shrink-0">
@@ -91,6 +96,16 @@ export default function Overview() {
           <div>
             <p className="text-xs md:text-sm font-medium text-slate-500 mb-1">System Accuracy</p>
             <h3 className="text-xl md:text-2xl font-bold text-slate-900 mt-1">{loading ? '...' : (averageAccuracy > 0 ? `${averageAccuracy.toFixed(1)}%` : '—')}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 flex items-start space-x-4">
+          <div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg shrink-0">
+            <Zap className="w-5 h-5 md:w-6 md:h-6" />
+          </div>
+          <div>
+            <p className="text-xs md:text-sm font-medium text-slate-500 mb-1">Avg. Compute Latency</p>
+            <h3 className="text-xl md:text-2xl font-bold text-slate-900 mt-1">{loading ? '...' : (averageComputeLatency > 0 ? `${averageComputeLatency.toFixed(2)}s` : '—')}</h3>
           </div>
         </div>
 

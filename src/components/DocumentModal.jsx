@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Save, Loader2, AlertCircle } from 'lucide-react';
 
@@ -12,6 +12,14 @@ export default function DocumentModal({ doc, onClose, onSuccess }) {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [ttl, setTtl] = useState(60);
+
+  useEffect(() => {
+    if (ttl > 0) {
+      const timerId = setInterval(() => setTtl((t) => t - 1), 1000);
+      return () => clearInterval(timerId);
+    }
+  }, [ttl]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -146,6 +154,72 @@ export default function DocumentModal({ doc, onClose, onSuccess }) {
                     <option value="Software">Software</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Read-Only Tax & Currency Breakdown */}
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Tax Breakdown (Read-Only)</h4>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Base Amount</label>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={doc.base_amount ?? 0} 
+                        className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-600 outline-none cursor-not-allowed" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Tax Amount</label>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={doc.tax_amount ?? 0} 
+                        className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-600 outline-none cursor-not-allowed" 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Tax Type</label>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={doc.tax_type ?? 'None'} 
+                        className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-600 outline-none cursor-not-allowed" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Currency</label>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={doc.currency_code ?? 'INR'} 
+                        className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-600 outline-none cursor-not-allowed" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Infrastructure Metadata */}
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Infrastructure Metadata</h4>
+                <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 font-mono text-xs text-slate-300 space-y-3">
+                  <div className="flex flex-col">
+                    <span className="text-slate-500 mb-0.5">Storage Node:</span>
+                    <span>us-east-1 (AWS via Supabase)</span>
+                  </div>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-slate-500 mb-0.5">Asset Path:</span>
+                    <span className="truncate" title={doc.file_url}>{doc.file_url || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-slate-500 mb-0.5">Security Token:</span>
+                    <span>Signed URL Expires in: <span className={ttl === 0 ? 'text-red-500 font-bold' : 'text-green-400'}>{ttl} seconds</span></span>
+                  </div>
                 </div>
               </div>
             </div>

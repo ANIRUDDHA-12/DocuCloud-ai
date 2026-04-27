@@ -1,10 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, ExternalLink, Loader2, AlertCircle, Search, Download } from 'lucide-react';
 import DocumentModal from './DocumentModal';
 
 export default function ExtractionTable({ documents, loading, error, onSuccess }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [exchangeRates, setExchangeRates] = useState({});
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/INR');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        if (data && data.rates) {
+          setExchangeRates(data.rates);
+        }
+      } catch (err) {
+        console.error('Failed to fetch exchange rates:', err);
+      }
+    };
+    fetchRates();
+  }, []);
+
+  const calculateINR = (amount, currencyCode) => {
+    if (amount === null || amount === undefined) return 0;
+    if (currencyCode === 'INR' || Object.keys(exchangeRates).length === 0) return amount;
+    const rate = exchangeRates[currencyCode];
+    if (!rate) return amount;
+    return amount / rate;
+  };
 
   // 1. Filter documents locally based on the search term
   const filteredDocuments = documents.filter((doc) => {
@@ -20,7 +45,7 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
     if (filteredDocuments.length === 0) return;
 
     // Standard CSV headers
-    const headers = ['Pipeline ID', 'Date', 'Vendor', 'Category', 'Total Amount', 'Status'];
+    const headers = ['Pipeline ID', 'Date', 'Vendor', 'Category', 'Total Amount', 'Currency', 'Base Amount', 'Tax Amount', 'Tax Type', 'Status'];
 
     // Map rows. Use standard escaping for CSV format (wrap strings in quotes)
     const rows = filteredDocuments.map(doc => {
@@ -34,6 +59,10 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
         `"${(doc.vendor || '').replace(/"/g, '""')}"`,
         `"${(doc.category || 'Uncategorized').replace(/"/g, '""')}"`,
         `"${doc.total_amount || 0}"`,
+        `"${doc.currency_code || 'INR'}"`,
+        `"${doc.base_amount || 0}"`,
+        `"${doc.tax_amount || 0}"`,
+        `"${doc.tax_type || 'None'}"`,
         `"${statusStr}"`
       ].join(',');
     });
@@ -55,9 +84,9 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
   };
 
   // Format currency securely using Intl formatter
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount, currency = 'USD') => {
     if (amount === null || amount === undefined) return '—';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
   };
 
   // Format date reliably
@@ -130,6 +159,7 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
               <th className="px-6 py-4">VENDOR</th>
               <th className="px-6 py-4">CATEGORY</th>
               <th className="px-6 py-4 text-right">TOTAL AMOUNT</th>
+              <th className="px-6 py-4 text-left">TAX BREAKDOWN</th>
               <th className="px-6 py-4 text-center">STATUS</th>
               <th className="px-6 py-4 text-center">SOURCE</th>
             </tr>
@@ -138,21 +168,21 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-green-500" />
                   Loading records...
                 </td>
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-red-500">
+                <td colSpan="7" className="px-6 py-12 text-center text-red-500">
                   <AlertCircle className="w-6 h-6 mx-auto mb-2 text-red-500" />
                   {error}
                 </td>
               </tr>
             ) : filteredDocuments.length === 0 ? (
                <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                   <FileText className="w-8 h-8 mx-auto mb-3 text-slate-300" />
                   {searchTerm ? 'No results found for your search.' : 'No extractions yet. Upload a document to begin.'}
                 </td>
@@ -174,8 +204,21 @@ export default function ExtractionTable({ documents, loading, error, onSuccess }
                     </span>
                   </td>
                   
-                  <td className="px-6 py-4 text-right font-medium text-slate-900">
-                    {formatCurrency(doc.total_amount)}
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex flex-col items-end">
+                      <span className="font-bold text-slate-900">
+                        {formatCurrency(calculateINR(doc.total_amount, doc.currency_code || 'USD'), 'INR')}
+                      </span>
+                      <span className="text-xs text-slate-500 mt-0.5">
+                        {doc.currency_code || 'USD'} {doc.total_amount !== null ? doc.total_amount.toFixed(2) : '—'}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4 text-left font-medium text-slate-900">
+                    <div className="text-sm">
+                      Base: {doc.base_amount ?? 0} | {doc.tax_type ?? 'None'}: {doc.tax_amount ?? 0}
+                    </div>
                   </td>
                   
                   <td className="px-6 py-4 text-center">
